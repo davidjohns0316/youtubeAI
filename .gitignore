@@ -1,0 +1,35 @@
+# Environment
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# Generated videos (large binary files)
+videos/*.mp4
+videos/*.mov
+videos/*.webm
+videos/videos.json
+
+# OAuth tokens & secrets (NEVER commit these)
+credentials/youtube_token.json
+credentials/youtube_oauth_state.txt
+credentials/tiktok_token.json
+credentials/tiktok_pkce.json
+credentials/youtube_client_secrets.json
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
