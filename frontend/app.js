@@ -1,3 +1,137 @@
+/* ── Video Ideas Data ────────────────────────────────────────────── */
+const VIDEO_IDEAS = [
+  {
+    rank: 1,
+    title: "The $1 Trillion Collapse: What Really Happened",
+    category: "Finance",
+    catClass: "cat-finance",
+    description: "Business collapse documentaries are the highest-earning format on YouTube — combining finance CPM ($12–18 RPM) with drama storytelling watch time. Channels covering FTX, Enron, and Lehman Brothers regularly hit 5M–20M views.",
+    rpm: "$12–18",
+    views: "5M–20M",
+    platform: "YouTube",
+    ratio: "1280:768",
+    duration: 10,
+    prompt: "Dramatic cinematic aerial shot of a towering glass skyscraper in a major financial district at golden hour, red stock ticker numbers cascading down the building's windows like falling rain, the structure slowly developing visible cracks, dust and embers drifting outward, ominous storm clouds gathering behind, photorealistic, epic scale, IMAX quality"
+  },
+  {
+    rank: 2,
+    title: "AI Just Replaced 100,000 Jobs — What No One Is Telling You",
+    category: "AI News",
+    catClass: "cat-ai-news",
+    description: "Fear-based AI displacement content is the most-shared format in the AI niche. Gets massive organic shares because viewers send it to coworkers and friends. AI advertisers pay $15–22 RPM — one of the highest CPMs on YouTube.",
+    rpm: "$15–22",
+    views: "3M–12M",
+    platform: "YouTube + TikTok",
+    ratio: "1280:768",
+    duration: 10,
+    prompt: "A vast modern open-plan office at twilight, rows of empty ergonomic chairs and dark monitors, holographic AI interfaces glowing blue above each workstation autonomously processing work, lone human silhouette standing at floor-to-ceiling windows overlooking a city, cinematic wide angle, melancholic atmosphere, blue and violet neon lighting"
+  },
+  {
+    rank: 3,
+    title: "The Untold Betrayal That Ended [Athlete]'s Career",
+    category: "Sports Drama",
+    catClass: "cat-sports",
+    description: "Betrayal narratives have the highest watch-through rate of any storytelling format ($10–13 RPM). Sports audiences are obsessive — they rewatch, comment, and share. Works for any major athlete with a controversial storyline.",
+    rpm: "$10–13",
+    views: "4M–18M",
+    platform: "YouTube",
+    ratio: "1280:768",
+    duration: 10,
+    prompt: "Cinematic slow motion shot of a lone athlete in a darkened stadium, single spotlight cutting through smoky air, thousands of empty seats surrounding them, championship trophy lying on its side in the foreground, dramatic shadows and volumetric light beams, film noir color grade, desaturated with deep blue shadows and warm amber highlights"
+  },
+  {
+    rank: 4,
+    title: "5 Money Rules the Rich Never Talk About",
+    category: "Finance",
+    catClass: "cat-finance",
+    description: "Evergreen aspirational finance content. The 'secret knowledge' hook drives enormous click-through rates. Consistently generates 2M–8M views across channels of all sizes. Perfect for TikTok short-form and YouTube long-form.",
+    rpm: "$10–15",
+    views: "2M–8M",
+    platform: "YouTube + TikTok",
+    ratio: "768:1280",
+    duration: 5,
+    prompt: "Luxurious penthouse living room at night overlooking a glittering city skyline, a mahogany desk covered in financial documents and a single glowing laptop, stacks of banded currency subtly visible, warm amber lamp light casting dramatic shadows, ultra-wealthy aesthetic, cinematic depth of field, photorealistic"
+  },
+  {
+    rank: 5,
+    title: "What Happens to Your Money When the Economy Crashes",
+    category: "Finance",
+    catClass: "cat-finance",
+    description: "Economic anxiety content spikes during any market volatility and stays evergreen. High search volume year-round. Finance advertisers (banks, brokerages) pay premium to reach this worried audience.",
+    rpm: "$11–16",
+    views: "3M–10M",
+    platform: "YouTube",
+    ratio: "1280:768",
+    duration: 10,
+    prompt: "Aerial cinematic shot flying over a major city at dusk, buildings flickering as power cuts in and out, red stock market graphs projected massive across skyscraper facades, crowds of tiny figures rushing through streets below, heavy storm clouds crackling with lightning rolling in from the horizon, dramatic and ominous, Blade Runner aesthetic"
+  },
+  {
+    rank: 6,
+    title: "I Tested Every Major AI Tool for 30 Days — Honest Results",
+    category: "AI News",
+    catClass: "cat-ai-news",
+    description: "Comparison and review formats dominate AI search traffic. Audiences trust 'honest test' framing. AI companies actively bid to advertise on this content, pushing CPMs to $20+. Evergreen as new tools launch constantly.",
+    rpm: "$18–25",
+    views: "1M–6M",
+    platform: "YouTube",
+    ratio: "1280:768",
+    duration: 10,
+    prompt: "Futuristic minimalist workspace surrounded by floating holographic screens each displaying a different AI tool interface generating art, code, and video in real time, soft blue and white ambient lighting, a single human hand reaching toward one glowing screen, clean and aspirational tech aesthetic, 8K photorealistic"
+  },
+  {
+    rank: 7,
+    title: "The Fix That Shocked the World: Sport's Biggest Scandal",
+    category: "Sports Drama",
+    catClass: "cat-sports",
+    description: "Match-fixing and sports scandal content gets massive spikes when stories break and long-tail views for years after. Comments sections explode, which signals the algorithm to push the video hard. $10–13 RPM with massive volume.",
+    rpm: "$10–13",
+    views: "5M–25M",
+    platform: "YouTube",
+    ratio: "1280:768",
+    duration: 10,
+    prompt: "Dramatic film noir style stadium scene at night, floodlights casting harsh shadows on an empty pitch, a shadowy figure in a referee uniform standing alone at center field, newspaper headlines swirling around them in the wind, dark and ominous atmosphere, high contrast black and deep blue color grade with flickers of harsh white light"
+  },
+  {
+    rank: 8,
+    title: "AGI Is 18 Months Away — The Timeline They're Hiding",
+    category: "AI News",
+    catClass: "cat-ai-news",
+    description: "Existential AI content drives the highest engagement rates in the AI niche — comment sections go viral on their own. Conspiracy-adjacent framing massively boosts shares. Works in 60-second TikTok format and 15-minute YouTube deep-dives.",
+    rpm: "$14–20",
+    views: "2M–10M",
+    platform: "YouTube + TikTok",
+    ratio: "1280:768",
+    duration: 10,
+    prompt: "A vast cosmic neural network visualization, billions of glowing nodes and synaptic connections spreading across a deep space background, slowly transforming from simple scattered points into an impossibly dense and complex web of pulsing golden light, camera slowly pulling back to reveal the infinite scale, ethereal and awe-inspiring, 8K"
+  },
+  {
+    rank: 9,
+    title: "From Broke to $50M: The Rise No One Believed In",
+    category: "Sports Drama",
+    catClass: "cat-sports",
+    description: "Underdog athlete success stories are the most re-watched storytelling format on YouTube. Emotional arc keeps viewers through to the end. Works perfectly as a 12–18 minute YouTube documentary with AI-generated cinematic visuals.",
+    rpm: "$9–12",
+    views: "6M–30M",
+    platform: "YouTube",
+    ratio: "1280:768",
+    duration: 10,
+    prompt: "Cinematic time-lapse montage feel — starting with a dark rain-soaked empty basketball court in a rough neighborhood at night, transitioning to a massive floodlit arena packed with roaring fans, confetti falling in slow motion, a lone athlete raising a championship trophy above their head in triumph, warm golden light flooding the scene, emotional and epic"
+  },
+  {
+    rank: 10,
+    title: "The Secret Way the Ultra-Rich Pay Zero Taxes (Legally)",
+    category: "Finance",
+    catClass: "cat-finance",
+    description: "Controversial finance content about wealth inequality goes massively viral. The 'legally' qualifier makes it safe for YouTube monetization while keeping the provocative hook. Finance + controversy = algorithm gold.",
+    rpm: "$13–19",
+    views: "4M–15M",
+    platform: "YouTube + TikTok",
+    ratio: "768:1280",
+    duration: 10,
+    prompt: "Opulent private bank vault interior, gleaming gold and polished marble, stacks of gold bars and banded currency behind reinforced glass, a single suited figure reviewing documents at a grand desk, dramatic chiaroscuro lighting with a single beam of light from above, cinematic and secretive atmosphere, ultra-realistic"
+  },
+];
+
 /* ── State ───────────────────────────────────────────────────────── */
 let activeTab = 'generate';
 let selectedVideoId = null;
@@ -12,11 +146,9 @@ document.addEventListener('DOMContentLoaded', () => {
   setupAdvancedToggle();
   setupPublishPanel();
   setupPlatformTabs();
+  setupIdeasTab();
   checkAuthStatus();
   handleOAuthCallback();
-
-  // Load library on start
-  if (activeTab === 'library') loadLibrary();
 });
 
 /* ── Navigation ──────────────────────────────────────────────────── */
@@ -33,6 +165,102 @@ function switchTab(tabName) {
   if (tabName === 'library') loadLibrary();
   if (tabName === 'settings') checkAuthStatus();
 }
+
+/* ── Ideas Tab ───────────────────────────────────────────────────── */
+function setupIdeasTab() {
+  renderIdeas('all');
+
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderIdeas(btn.dataset.filter);
+    });
+  });
+}
+
+function renderIdeas(filter) {
+  const list = document.getElementById('ideas-list');
+  list.innerHTML = '';
+
+  const filtered = filter === 'all'
+    ? VIDEO_IDEAS
+    : VIDEO_IDEAS.filter(i => i.category === filter);
+
+  filtered.forEach((idea, idx) => {
+    const card = document.createElement('div');
+    card.className = 'idea-card';
+    card.dataset.category = idea.category;
+
+    const ratioLabel = idea.ratio === '768:1280' ? '9:16 Portrait' : '16:9 Landscape';
+    const platformIcon = idea.platform.includes('TikTok') && idea.platform.includes('YouTube') ? '▶ + ♪' :
+                         idea.platform.includes('TikTok') ? '♪ TikTok' : '▶ YouTube';
+
+    card.innerHTML = `
+      <div class="idea-rank">${idea.rank}</div>
+      <div class="idea-body">
+        <div class="idea-top">
+          <span class="idea-title">${escHtml(idea.title)}</span>
+          <span class="idea-category ${idea.catClass}">${idea.category}</span>
+        </div>
+        <div class="idea-desc">${escHtml(idea.description)}</div>
+        <div class="idea-stats">
+          <span class="idea-stat">💰 <strong>${idea.rpm} RPM</strong></span>
+          <span class="idea-stat">👁 <strong>${idea.views} views</strong></span>
+          <span class="idea-stat">📐 <strong>${ratioLabel}</strong></span>
+          <span class="idea-stat">📱 <strong>${platformIcon}</strong></span>
+        </div>
+        <div class="idea-prompt-preview" id="prompt-preview-${idx}">
+          <strong style="color:var(--text2);font-style:normal">Runway prompt:</strong><br>${escHtml(idea.prompt)}
+        </div>
+      </div>
+      <div class="idea-actions">
+        <button class="btn-use-prompt" onclick="useIdeaPrompt(${VIDEO_IDEAS.indexOf(idea)})">
+          ✨ Use This Prompt
+        </button>
+        <button class="btn-preview-prompt" onclick="togglePromptPreview('prompt-preview-${idx}', this)">
+          Preview Prompt
+        </button>
+      </div>
+    `;
+
+    list.appendChild(card);
+  });
+}
+
+function togglePromptPreview(previewId, btn) {
+  const el = document.getElementById(previewId);
+  const open = el.classList.toggle('open');
+  btn.textContent = open ? 'Hide Prompt' : 'Preview Prompt';
+}
+
+function useIdeaPrompt(ideaIndex) {
+  const idea = VIDEO_IDEAS[ideaIndex];
+
+  // Switch to Generate tab
+  switchTab('generate');
+
+  // Fill in the form
+  document.getElementById('prompt').value = idea.prompt;
+  document.getElementById('ratio').value = idea.ratio;
+  document.getElementById('duration').value = idea.duration;
+
+  // Highlight the prompt field
+  const promptEl = document.getElementById('prompt');
+  promptEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  promptEl.focus();
+  promptEl.style.borderColor = 'var(--accent)';
+  promptEl.style.boxShadow = '0 0 0 3px var(--accent-glow)';
+  setTimeout(() => {
+    promptEl.style.borderColor = '';
+    promptEl.style.boxShadow = '';
+  }, 2000);
+
+  toast(`Loaded: "${idea.title}"`, 'success');
+}
+
+window.useIdeaPrompt = useIdeaPrompt;
+window.togglePromptPreview = togglePromptPreview;
 
 /* ── OAuth callback handler ──────────────────────────────────────── */
 function handleOAuthCallback() {

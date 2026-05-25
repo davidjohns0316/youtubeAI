@@ -19,6 +19,7 @@
     </div>
     <nav class="nav">
       <button class="nav-btn active" data-tab="generate">Generate</button>
+      <button class="nav-btn" data-tab="ideas">Ideas</button>
       <button class="nav-btn" data-tab="library">Library</button>
       <button class="nav-btn" data-tab="settings">Settings</button>
     </nav>
@@ -107,6 +108,21 @@
         <div class="progress-prompt" id="progress-prompt"></div>
       </div>
     </div>
+  </section>
+
+  <!-- ── Ideas Tab ─────────────────────────────────────────────────── -->
+  <section class="tab" id="tab-ideas">
+    <div class="section-header">
+      <h1>Video Ideas</h1>
+      <p>Top 10 proven formats ranked by views &amp; revenue — click to auto-generate a prompt</p>
+    </div>
+    <div class="ideas-filters">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="Finance">💰 Finance</button>
+      <button class="filter-btn" data-filter="AI News">🤖 AI News</button>
+      <button class="filter-btn" data-filter="Sports Drama">🏆 Sports Drama</button>
+    </div>
+    <div class="ideas-list" id="ideas-list"></div>
   </section>
 
   <!-- ── Library Tab ────────────────────────────────────────────────── -->
