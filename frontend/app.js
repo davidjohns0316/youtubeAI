@@ -138,6 +138,7 @@ let selectedVideoId = null;
 let pollInterval = null;
 let authStatus = { youtube: false, tiktok: false, runway: false };
 let lastAudioFilename = null;
+let lastSrtFilename = null;
 
 /* ── Init ────────────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
@@ -921,16 +922,24 @@ async function generateVoiceover() {
     }
     const data = await res.json();
     lastAudioFilename = data.audio_filename;
+    lastSrtFilename = data.srt_filename || null;
+
+    // Show/hide subtitle toggle based on whether SRT was generated
+    const subToggle = document.getElementById('subtitles-toggle');
+    if (subToggle) {
+      subToggle.disabled = !data.has_subtitles;
+      subToggle.checked = data.has_subtitles;
+    }
 
     const audio = document.getElementById('vo-audio-preview');
     audio.src = `/api/audio/${data.audio_filename}`;
     document.getElementById('audio-section').style.display = 'block';
 
-    // Load completed videos into the picker
     await loadVideosForCombine();
 
     audio.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    toast(`Voiceover ready! (${Math.round(data.duration_seconds)}s) — now pick a video and combine`, 'success');
+    const subNote = data.has_subtitles ? ' + subtitles ready' : '';
+    toast(`Voiceover ready! (${Math.round(data.duration_seconds)}s)${subNote}`, 'success');
   } catch (err) {
     toast(err.message, 'error');
   } finally {
@@ -956,20 +965,28 @@ async function combineVideoAudio() {
   btnText.textContent = 'Combining...';
 
   try {
+    const wantSubs = document.getElementById('subtitles-toggle')?.checked && lastSrtFilename;
     const res = await fetch('/api/compose/combine', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ video_id: videoId, audio_filename: lastAudioFilename }),
+      body: JSON.stringify({
+        video_id: videoId,
+        audio_filename: lastAudioFilename,
+        srt_filename: wantSubs ? lastSrtFilename : null,
+      }),
     });
     if (!res.ok) {
       const err = await res.json();
       throw new Error(err.detail || 'Combine failed');
     }
 
+    const combineData = await res.json();
     lastAudioFilename = null;
+    lastSrtFilename = null;
     document.getElementById('audio-section').style.display = 'none';
 
-    toast('Video + audio combined! Opening library…', 'success');
+    const subMsg = combineData.has_subtitles ? ' with subtitles' : '';
+    toast(`Video + audio${subMsg} combined! Opening library…`, 'success');
     setTimeout(() => switchTab('library'), 1200);
   } catch (err) {
     toast(err.message, 'error');

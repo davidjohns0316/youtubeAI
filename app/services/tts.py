@@ -41,24 +41,88 @@ def _ffmpeg() -> str:
 
 def list_voices() -> dict:
     voices = {}
-    # Edge voices first (best quality, free)
     voices.update({f"edge:{k}": k for k in EDGE_VOICES})
-    # macOS fallback
     voices.update({f"mac:{k}": k for k in MAC_VOICES})
-    # ElevenLabs premium (only shown if key is set)
     if settings.elevenlabs_api_key:
         voices.update({f"el:{k}": f"{k} ✨" for k in ELEVENLABS_VOICES})
     return voices
 
 
-async def generate_tts_edge(text: str, output_mp3: Path, voice: str = "en-US-AriaNeural") -> None:
-    """Generate TTS using Microsoft Edge neural voices — high quality, free."""
+# ── SRT helpers ────────────────────────────────────────────────────────────
+
+def _srt_timestamp(seconds: float) -> str:
+    h = int(seconds // 3600)
+    m = int((seconds % 3600) // 60)
+    s = int(seconds % 60)
+    ms = int(round((seconds % 1) * 1000))
+    return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
+
+
+def _words_to_srt(words: list[dict], words_per_card: int = 5) -> str:
+    """
+    Group word-boundary events into subtitle cards (N words each) and
+    return SRT-formatted text.
+    Each word dict: {"word": str, "start": float (sec), "duration": float (sec)}
+    """
+    if not words:
+        return ""
+
+    srt_blocks = []
+    idx = 1
+    i = 0
+    while i < len(words):
+        chunk = words[i : i + words_per_card]
+        text = " ".join(w["word"] for w in chunk)
+        start = chunk[0]["start"]
+        end = chunk[-1]["start"] + chunk[-1]["duration"]
+        # Tiny gap to avoid overlapping the next card
+        end = min(end, start + 3.0)
+        srt_blocks.append(
+            f"{idx}\n{_srt_timestamp(start)} --> {_srt_timestamp(end)}\n{text}\n"
+        )
+        idx += 1
+        i += words_per_card
+
+    return "\n".join(srt_blocks)
+
+
+# ── TTS generators ─────────────────────────────────────────────────────────
+
+async def generate_tts_edge(
+    text: str,
+    output_mp3: Path,
+    voice: str = "en-US-AriaNeural",
+) -> Path | None:
+    """
+    Generate TTS using Microsoft Edge neural voices.
+    Returns the path to a companion .srt subtitle file (word-accurate timing),
+    or None if word boundaries aren't available.
+    """
     communicate = edge_tts.Communicate(text, voice)
-    await communicate.save(str(output_mp3))
+    word_boundaries: list[dict] = []
+
+    with open(output_mp3, "wb") as audio_file:
+        async for chunk in communicate.stream():
+            if chunk["type"] == "audio":
+                audio_file.write(chunk["data"])
+            elif chunk["type"] == "WordBoundary":
+                word_boundaries.append({
+                    "word": chunk["text"],
+                    "start": chunk["offset"] / 10_000_000,    # 100-ns units → seconds
+                    "duration": chunk["duration"] / 10_000_000,
+                })
+
+    if not word_boundaries:
+        return None
+
+    srt_content = _words_to_srt(word_boundaries, words_per_card=5)
+    srt_path = output_mp3.with_suffix(".srt")
+    srt_path.write_text(srt_content, encoding="utf-8")
+    return srt_path
 
 
 def generate_tts_mac(text: str, output_mp3: Path, voice_name: str = "Samantha") -> None:
-    """Generate TTS using macOS say command (fallback)."""
+    """Generate TTS using macOS say command (fallback, no subtitle timing)."""
     aiff = output_mp3.with_suffix(".aiff")
     try:
         subprocess.run(
@@ -78,7 +142,7 @@ def generate_tts_mac(text: str, output_mp3: Path, voice_name: str = "Samantha") 
 
 
 async def generate_tts_elevenlabs(text: str, output_mp3: Path, voice_id: str) -> None:
-    """Generate TTS using ElevenLabs API (premium)."""
+    """Generate TTS using ElevenLabs API (premium, no subtitle timing)."""
     if not settings.elevenlabs_api_key:
         raise ValueError("ELEVENLABS_API_KEY not set in .env")
 

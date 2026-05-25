@@ -170,9 +170,15 @@
             </select>
           </div>
 
-          <button class="btn btn-secondary" id="gen-voice-btn" onclick="generateVoiceover()">
-            <span id="gen-voice-text">🔊 Generate Voiceover</span>
-          </button>
+          <div class="subtitles-row">
+            <button class="btn btn-secondary" id="gen-voice-btn" onclick="generateVoiceover()">
+              <span id="gen-voice-text">🔊 Generate Voiceover</span>
+            </button>
+            <label class="toggle-label">
+              <input type="checkbox" id="subtitles-toggle" checked>
+              <span class="toggle-text">Burn subtitles</span>
+            </label>
+          </div>
 
           <!-- Audio preview + combine -->
           <div id="audio-section" style="display:none;margin-top:16px">

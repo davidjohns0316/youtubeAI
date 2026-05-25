@@ -39,6 +39,7 @@ class TTSRequest(BaseModel):
 class CombineRequest(BaseModel):
     video_id: str
     audio_filename: str
+    srt_filename: str | None = None   # optional — burn subtitles if provided
 
 
 @router.get("/voices")
@@ -48,9 +49,7 @@ async def get_voices():
 
 @router.post("/script/generate")
 async def generate_script_endpoint(req: ScriptRequest):
-    # Search for real news articles on the topic first
     articles = await search_news(req.topic, max_results=5)
-
     try:
         result = await asyncio.to_thread(
             generate_script, req.topic, req.category, req.duration_seconds, articles
@@ -76,12 +75,13 @@ async def generate_script_endpoint(req: ScriptRequest):
 async def generate_tts_endpoint(req: TTSRequest):
     audio_id = str(uuid.uuid4())
     output_mp3 = settings.videos_dir / f"{audio_id}.mp3"
+    srt_path: Path | None = None
 
     if req.voice_key.startswith("edge:"):
         display_name = req.voice_key[5:]
         voice_id = EDGE_VOICES.get(display_name, "en-US-AriaNeural")
         try:
-            await generate_tts_edge(req.text, output_mp3, voice_id)
+            srt_path = await generate_tts_edge(req.text, output_mp3, voice_id)
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
     elif req.voice_key.startswith("mac:"):
@@ -104,12 +104,17 @@ async def generate_tts_endpoint(req: TTSRequest):
         raise HTTPException(status_code=400, detail="voice_key must start with 'edge:', 'mac:', or 'el:'")
 
     duration = await asyncio.to_thread(get_audio_duration, output_mp3)
-    return {"audio_filename": output_mp3.name, "duration_seconds": duration}
+    return {
+        "audio_filename": output_mp3.name,
+        "srt_filename": srt_path.name if srt_path else None,
+        "has_subtitles": srt_path is not None,
+        "duration_seconds": duration,
+    }
 
 
 @router.post("/compose/combine")
 async def combine_video_audio(req: CombineRequest):
-    """Merge a generated video with a TTS audio track using ffmpeg."""
+    """Merge video + audio, and optionally burn in subtitles."""
     video_path = settings.videos_dir / f"{req.video_id}.mp4"
     audio_path = settings.videos_dir / req.audio_filename
 
@@ -118,34 +123,65 @@ async def combine_video_audio(req: CombineRequest):
     if not audio_path.exists():
         raise HTTPException(status_code=404, detail=f"Audio file not found: {req.audio_filename}")
 
+    srt_path: Path | None = None
+    if req.srt_filename:
+        srt_path = settings.videos_dir / req.srt_filename
+        if not srt_path.exists():
+            srt_path = None  # graceful fallback — skip subtitles
+
     combined_id = str(uuid.uuid4())
     output_path = settings.videos_dir / f"{combined_id}.mp4"
 
     def _merge():
-        result = subprocess.run(
-            [
+        if srt_path:
+            # Burn subtitles — requires re-encoding video
+            # Escape the SRT path for ffmpeg filter (colons and backslashes must be escaped)
+            srt_str = str(srt_path).replace("\\", "/").replace(":", "\\:")
+            vf = (
+                f"subtitles='{srt_str}':force_style='"
+                "FontName=Arial,"
+                "FontSize=22,"
+                "PrimaryColour=&H00FFFFFF,"   # white
+                "OutlineColour=&H00000000,"   # black outline
+                "Bold=1,"
+                "BorderStyle=1,"
+                "Outline=2,"
+                "Shadow=0,"
+                "Alignment=2,"               # bottom center
+                "MarginV=40"
+                "'"
+            )
+            cmd = [
+                _ffmpeg_bin(),
+                "-i", str(video_path),
+                "-i", str(audio_path),
+                "-vf", vf,
+                "-c:v", "libx264", "-preset", "fast", "-crf", "22",
+                "-c:a", "aac", "-b:a", "192k",
+                "-shortest",
+                "-movflags", "+faststart",
+                "-y", str(output_path),
+            ]
+        else:
+            # No subtitles — fast copy pass
+            cmd = [
                 _ffmpeg_bin(),
                 "-i", str(video_path),
                 "-i", str(audio_path),
                 "-c:v", "copy",
-                "-c:a", "aac",
-                "-b:a", "192k",
+                "-c:a", "aac", "-b:a", "192k",
                 "-shortest",
                 "-movflags", "+faststart",
                 "-y", str(output_path),
-            ],
-            capture_output=True, text=True,
-        )
+            ]
+        result = subprocess.run(cmd, capture_output=True, text=True)
         return result.returncode, result.stderr[-600:] if result.returncode != 0 else ""
 
     returncode, err = await asyncio.to_thread(_merge)
     if returncode != 0:
         raise HTTPException(status_code=500, detail=f"ffmpeg combine failed: {err}")
 
-    # Look up original video metadata to copy prompt etc.
     original = video_store.get(req.video_id) or {}
-
-    # Register the combined video in the store so it shows up in the library
     video_store.add({
         "id": combined_id,
         "prompt": original.get("prompt", "Combined video"),
@@ -162,9 +198,14 @@ async def combine_video_audio(req: CombineRequest):
         "tiktok_publish_id": None,
         "runway_task_id": None,
         "has_audio": True,
+        "has_subtitles": srt_path is not None,
     })
 
-    return {"combined_filename": output_path.name, "video_id": combined_id}
+    return {
+        "combined_filename": output_path.name,
+        "video_id": combined_id,
+        "has_subtitles": srt_path is not None,
+    }
 
 
 @router.get("/audio/{filename}")

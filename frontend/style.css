@@ -679,6 +679,34 @@ select {
   color: var(--text3);
 }
 
+.subtitles-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text2);
+  user-select: none;
+}
+
+.toggle-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.toggle-label input:disabled + .toggle-text {
+  color: var(--text3);
+}
+
 .combine-row {
   display: flex;
   align-items: center;
