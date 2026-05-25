@@ -417,6 +417,24 @@ function setupGenerateForm() {
     e.preventDefault();
     await startGeneration(form);
   });
+
+  // Duration warning
+  const durationSel = document.getElementById('duration');
+  const warningEl = document.createElement('p');
+  warningEl.className = 'duration-warning';
+  warningEl.style.cssText = 'font-size:12px;color:var(--yellow);margin-top:6px;display:none';
+  durationSel.parentElement.appendChild(warningEl);
+
+  durationSel.addEventListener('change', () => {
+    const val = parseInt(durationSel.value);
+    const clips = Math.ceil(val / 10);
+    if (clips > 1) {
+      warningEl.style.display = 'block';
+      warningEl.textContent = `⚠ Uses ${clips} Runway API calls (~${clips * 1}–${clips * 3} min total)`;
+    } else {
+      warningEl.style.display = 'none';
+    }
+  });
 }
 
 async function startGeneration(form) {
@@ -445,13 +463,19 @@ async function startGeneration(form) {
       throw new Error(err.detail || 'Generation failed');
     }
     const data = await res.json();
+    const clipsTotal = data.clips_total || 1;
 
     progressPrompt.textContent = `"${formData.get('prompt')}"`;
     progressCard.style.display = 'block';
-    progressBar.style.width = '5%';
-    progressStatus.textContent = 'Queued — Runway is processing your request...';
+    progressBar.style.width = '3%';
+    progressStatus.textContent = clipsTotal > 1
+      ? `Starting clip 1 of ${clipsTotal}...`
+      : 'Queued — Runway is processing your request...';
+    document.getElementById('progress-note').textContent = clipsTotal > 1
+      ? `${clipsTotal} clips × 1–3 min each — clips auto-stitch when done`
+      : 'Gen-3 Alpha Turbo takes 1–3 min per clip';
 
-    startPolling(data.video_id);
+    startPolling(data.video_id, clipsTotal);
   } catch (err) {
     toast(err.message, 'error');
     btn.disabled = false;
@@ -459,9 +483,8 @@ async function startGeneration(form) {
   }
 }
 
-function startPolling(videoId) {
+function startPolling(videoId, clipsTotal) {
   clearInterval(pollInterval);
-  let fakeProgress = 5;
 
   pollInterval = setInterval(async () => {
     try {
@@ -470,11 +493,12 @@ function startPolling(videoId) {
 
       const progressBar = document.getElementById('progress-bar');
       const progressStatus = document.getElementById('progress-status');
+      const progressNote = document.getElementById('progress-note');
 
       if (video.status === 'completed') {
         clearInterval(pollInterval);
         progressBar.style.width = '100%';
-        progressStatus.textContent = 'Complete! Loading your video...';
+        progressStatus.textContent = clipsTotal > 1 ? 'Stitching clips into final video...' : 'Complete! Loading your video...';
 
         setTimeout(() => {
           document.getElementById('progress-card').style.display = 'none';
@@ -486,11 +510,11 @@ function startPolling(videoId) {
           document.getElementById('file-preview').style.display = 'none';
           toast('Video generated! Opening library...', 'success');
           switchTab('library');
-        }, 800);
+        }, 1000);
 
       } else if (video.status === 'failed') {
         clearInterval(pollInterval);
-        progressStatus.textContent = 'Generation failed. Please try again.';
+        progressStatus.textContent = video.error || 'Generation failed. Please try again.';
         progressBar.style.background = 'var(--red)';
         const btn = document.getElementById('generate-btn');
         btn.disabled = false;
@@ -498,14 +522,27 @@ function startPolling(videoId) {
         toast('Video generation failed', 'error');
 
       } else {
-        // Still generating — advance fake progress
-        const realProgress = (video.progress || 0) * 100;
-        fakeProgress = Math.max(fakeProgress + 3, realProgress);
-        fakeProgress = Math.min(fakeProgress, 90);
-        progressBar.style.width = `${fakeProgress}%`;
-        progressStatus.textContent = realProgress > 0
-          ? `Processing... ${Math.round(realProgress)}%`
-          : 'Runway is generating your video...';
+        // Multi-clip: use clips_done / clips_total for real progress
+        const clipsTotal = video.clips_total || 1;
+        const clipsDone = video.clips_done || 0;
+        const realPct = clipsTotal > 1
+          ? (clipsDone / clipsTotal) * 100
+          : (video.progress || 0) * 100;
+
+        // Nudge forward slightly so bar never looks stuck
+        const displayPct = Math.min(realPct + 2, 95);
+        progressBar.style.width = `${displayPct}%`;
+
+        // Status label
+        progressStatus.textContent = video.status_label ||
+          (clipsTotal > 1
+            ? `Generating clip ${clipsDone + 1} of ${clipsTotal}...`
+            : 'Runway is generating your video...');
+
+        // Update note for multi-clip
+        if (clipsTotal > 1) {
+          progressNote.textContent = `${clipsTotal} clips × 1–3 min each — clips auto-stitch when done`;
+        }
       }
     } catch {
       // Network hiccup — keep polling
