@@ -44,12 +44,28 @@ async def publish_to_youtube(req: YouTubePublishRequest):
     video = _get_ready_video(req.video_id)
     video_path = str(settings.videos_dir / video["filename"])
 
+    # ── Force YouTube Shorts classification ──────────────────────────
+    # Ensure #Shorts is in the title (YouTube uses this as the primary signal)
+    title = req.title
+    if "#Shorts" not in title and "#shorts" not in title:
+        title = f"{title} #Shorts"
+
+    # Ensure #Shorts is in description too (belt-and-suspenders)
+    description = req.description
+    if "#Shorts" not in description and "#shorts" not in description:
+        description = f"{description}\n\n#Shorts".strip()
+
+    # Add shorts to tags list
+    tags = list(req.tags)
+    if "Shorts" not in tags and "shorts" not in tags:
+        tags = ["Shorts", "YouTubeShorts"] + tags
+
     try:
         yt_url = youtube_service.upload_video(
             video_path=video_path,
-            title=req.title,
-            description=req.description,
-            tags=req.tags,
+            title=title,
+            description=description,
+            tags=tags,
             privacy=req.privacy,
             category_id=req.category_id,
         )

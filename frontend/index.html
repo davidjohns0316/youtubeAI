@@ -77,8 +77,8 @@
             <div class="form-group">
               <label for="ratio">Aspect Ratio</label>
               <select id="ratio" name="ratio">
-                <option value="1280:768">16:9 — YouTube / Landscape</option>
-                <option value="768:1280">9:16 — TikTok / Portrait</option>
+                <option value="768:1280" selected>9:16 — Shorts / TikTok (Recommended)</option>
+                <option value="1280:768">16:9 — Landscape</option>
                 <option value="1024:1024">1:1 — Square</option>
               </select>
             </div>
@@ -293,8 +293,11 @@
                 ⚠ YouTube not connected.
                 <button class="link-btn" onclick="switchTab('settings')">Connect in Settings →</button>
               </div>
+              <div class="shorts-note">
+                📱 <strong>#Shorts</strong> is automatically added to title, description &amp; tags so YouTube classifies this as a Short. Best with 9:16 vertical video.
+              </div>
               <button class="btn btn-youtube" id="publish-yt-btn">
-                Upload to YouTube
+                Upload to YouTube Shorts
               </button>
             </div>
 
