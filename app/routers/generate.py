@@ -5,7 +5,9 @@ import subprocess
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import quote
 
+import httpx
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
@@ -53,6 +55,34 @@ def _stitch_clips(clip_paths: list[Path], output_path: Path) -> tuple[bool, str]
     return result.returncode == 0, result.stderr[-400:] if result.returncode != 0 else ""
 
 
+RATIO_DIMS = {"1280:768": (1280, 768), "768:1280": (768, 1280), "1024:1024": (1024, 1024)}
+
+
+async def _fetch_starting_frame(prompt: str, ratio: str, save_dir: Path) -> str | None:
+    """
+    Generate a real starting frame from Pollinations.ai (free, no API key).
+    This gives Runway actual visual content to animate instead of a blank placeholder.
+    Returns the saved image path, or None if it fails (Runway will use its own placeholder).
+    """
+    w, h = RATIO_DIMS.get(ratio, (1280, 768))
+    # Truncate prompt — Pollinations has URL length limits
+    short_prompt = prompt[:300]
+    url = (
+        f"https://image.pollinations.ai/prompt/{quote(short_prompt)}"
+        f"?width={w}&height={h}&nologo=true&model=flux&seed=42"
+    )
+    try:
+        async with httpx.AsyncClient(timeout=45, follow_redirects=True) as client:
+            resp = await client.get(url)
+            if resp.is_success and resp.headers.get("content-type", "").startswith("image/"):
+                frame_path = save_dir / f"start_{uuid.uuid4().hex[:8]}.jpg"
+                frame_path.write_bytes(resp.content)
+                return str(frame_path)
+    except Exception:
+        pass
+    return None
+
+
 # ── Background task: frame-chained multi-clip generation ─────────────────
 
 async def _generate_clips(
@@ -73,10 +103,15 @@ async def _generate_clips(
     clip_paths: list[Path] = []
     frame_paths: list[Path] = []
 
-    # The image fed into each generation:
-    # clip 0 = user's reference image (or None for text-only)
-    # clip N = last frame of clip N-1
+    # If no user image supplied, generate a real starting frame from Pollinations.ai
+    # so Runway has actual visual content to animate (dark placeholder = black video)
     current_image: str | None = image_path
+    if not current_image:
+        video_store.update(video_id, {"status_label": "Generating starting frame from prompt..."})
+        generated_frame = await _fetch_starting_frame(prompt, ratio, settings.videos_dir)
+        if generated_frame:
+            current_image = generated_frame
+            frame_paths.append(Path(generated_frame))  # track for cleanup
 
     for i in range(num_clips):
         is_chained = i > 0
