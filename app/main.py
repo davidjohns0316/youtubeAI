@@ -7,10 +7,11 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.routers import auth, compose, generate, publish
+from app.routers import analytics, auth, compose, generate, publish
 
 app = FastAPI(title="YouTubeAI", version="1.0.0", description="AI video generation and publishing")
 
+app.include_router(analytics.router)
 app.include_router(auth.router)
 app.include_router(compose.router)
 app.include_router(generate.router)

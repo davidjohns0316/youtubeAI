@@ -166,6 +166,7 @@ function switchTab(tabName) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabName));
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === `tab-${tabName}`));
   if (tabName === 'library') loadLibrary();
+  if (tabName === 'analytics') loadAnalytics();
   if (tabName === 'settings') checkAuthStatus();
 }
 
@@ -830,6 +831,124 @@ function setupPlatformTabs() {
     });
   });
 }
+
+/* ── Analytics Tab ───────────────────────────────────────────────── */
+async function loadAnalytics() {
+  const grid = document.getElementById('analytics-grid');
+  const empty = document.getElementById('analytics-empty');
+  const noAuth = document.getElementById('analytics-no-auth');
+  const btn = document.getElementById('analytics-refresh-btn');
+  const btnText = document.getElementById('analytics-refresh-text');
+  const updated = document.getElementById('analytics-updated');
+
+  btn.disabled = true;
+  btnText.textContent = 'Loading...';
+  grid.innerHTML = '';
+  empty.style.display = 'none';
+  noAuth.style.display = 'none';
+
+  try {
+    const res = await fetch('/api/analytics/youtube');
+    if (res.status === 400) {
+      noAuth.style.display = 'flex';
+      return;
+    }
+    if (!res.ok) throw new Error('Failed to load analytics');
+
+    const items = await res.json();
+    if (!items.length) {
+      empty.style.display = 'flex';
+      return;
+    }
+
+    items.forEach(item => grid.appendChild(buildAnalyticsCard(item)));
+    updated.textContent = `Updated ${new Date().toLocaleTimeString()}`;
+  } catch (err) {
+    toast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btnText.textContent = '↺ Refresh Stats';
+  }
+}
+
+function buildAnalyticsCard(item) {
+  const card = document.createElement('div');
+  card.className = 'analytics-card';
+
+  if (item.error) {
+    card.innerHTML = `
+      <div class="analytics-card-body">
+        <p class="analytics-prompt">${escHtml(item.prompt || '')}</p>
+        <p style="color:var(--red);font-size:13px">⚠ ${escHtml(item.error)}</p>
+        <a href="${escHtml(item.youtube_url || '')}" target="_blank" class="yt-link">Open on YouTube ↗</a>
+      </div>`;
+    return card;
+  }
+
+  const posted = item.published_at
+    ? new Date(item.published_at).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'})
+    : '';
+
+  card.innerHTML = `
+    <div class="analytics-thumb-wrap">
+      ${item.thumbnail
+        ? `<img src="${escHtml(item.thumbnail)}" class="analytics-thumb" alt="thumbnail">`
+        : `<div class="analytics-thumb-placeholder">🎬</div>`}
+    </div>
+    <div class="analytics-card-body">
+      <p class="analytics-title">${escHtml(item.title || item.prompt || '')}</p>
+      ${posted ? `<p class="analytics-date">Posted ${posted}</p>` : ''}
+      <div class="analytics-stats">
+        <div class="stat-block">
+          <span class="stat-value">${fmtNum(item.views)}</span>
+          <span class="stat-label">Views</span>
+        </div>
+        <div class="stat-block">
+          <span class="stat-value">${fmtNum(item.likes)}</span>
+          <span class="stat-label">Likes</span>
+        </div>
+        <div class="stat-block">
+          <span class="stat-value">${fmtNum(item.comments)}</span>
+          <span class="stat-label">Comments</span>
+        </div>
+      </div>
+      <div class="analytics-actions">
+        <a href="${escHtml(item.youtube_url)}" target="_blank" class="btn btn-secondary btn-sm">
+          ▶ Open on YouTube
+        </a>
+        <button class="btn btn-secondary btn-sm" onclick="refreshSingleAnalytic('${item.video_id}', this)">
+          ↺ Refresh
+        </button>
+      </div>
+    </div>`;
+  return card;
+}
+
+async function refreshSingleAnalytic(videoId, btn) {
+  btn.disabled = true;
+  btn.textContent = '...';
+  try {
+    const res = await fetch(`/api/analytics/youtube/${videoId}`);
+    if (!res.ok) throw new Error('Refresh failed');
+    const item = await res.json();
+    const card = btn.closest('.analytics-card');
+    const newCard = buildAnalyticsCard(item);
+    card.replaceWith(newCard);
+  } catch (err) {
+    toast(err.message, 'error');
+    btn.disabled = false;
+    btn.textContent = '↺ Refresh';
+  }
+}
+
+function fmtNum(n) {
+  if (n === undefined || n === null) return '—';
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+  if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
+  return n.toLocaleString();
+}
+
+window.refreshSingleAnalytic = refreshSingleAnalytic;
 
 /* ── Script & Voiceover ──────────────────────────────────────────── */
 async function loadVoices() {

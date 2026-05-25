@@ -21,6 +21,7 @@
       <button class="nav-btn active" data-tab="generate">Generate</button>
       <button class="nav-btn" data-tab="ideas">Ideas</button>
       <button class="nav-btn" data-tab="library">Library</button>
+      <button class="nav-btn" data-tab="analytics">Analytics</button>
       <button class="nav-btn" data-tab="settings">Settings</button>
     </nav>
   </div>
@@ -323,6 +324,35 @@
         </div>
       </div>
     </div>
+  </section>
+
+  <!-- ── Analytics Tab ────────────────────────────────────────────────── -->
+  <section class="tab" id="tab-analytics">
+    <div class="section-header">
+      <h1>Analytics</h1>
+      <p>Live stats from YouTube for every video you've posted</p>
+    </div>
+
+    <div class="analytics-toolbar">
+      <button class="btn btn-secondary" id="analytics-refresh-btn" onclick="loadAnalytics()">
+        <span id="analytics-refresh-text">↺ Refresh Stats</span>
+      </button>
+      <span class="analytics-updated" id="analytics-updated"></span>
+    </div>
+
+    <div id="analytics-empty" class="empty-state" style="display:none">
+      <div class="empty-icon">📊</div>
+      <p>No videos posted to YouTube yet.</p>
+      <button class="btn btn-primary" onclick="switchTab('library')">Go to Library</button>
+    </div>
+
+    <div id="analytics-no-auth" class="empty-state" style="display:none">
+      <div class="empty-icon">🔗</div>
+      <p>Connect YouTube to see analytics.</p>
+      <button class="btn btn-primary" onclick="switchTab('settings')">Connect in Settings</button>
+    </div>
+
+    <div class="analytics-grid" id="analytics-grid"></div>
   </section>
 
   <!-- ── Settings Tab ───────────────────────────────────────────────── -->
