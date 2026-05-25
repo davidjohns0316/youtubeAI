@@ -179,14 +179,15 @@
             <div class="vo-divider"></div>
             <label style="display:block;margin-bottom:8px;font-size:13px;color:var(--text2)">Preview</label>
             <audio id="vo-audio-preview" controls style="width:100%;border-radius:8px;margin-bottom:16px"></audio>
-            <div class="combine-row">
-              <div class="combine-info">
-                <span id="combine-video-label" style="font-size:13px;color:var(--text2)">No video selected — generate one above first</span>
-              </div>
-              <button class="btn btn-primary" id="combine-btn" onclick="combineVideoAudio()" disabled>
-                <span id="combine-btn-text">🎬 Combine Video + Audio</span>
-              </button>
+            <div class="form-group">
+              <label for="combine-video-select">Apply audio to video</label>
+              <select id="combine-video-select">
+                <option value="">— select a video —</option>
+              </select>
             </div>
+            <button class="btn btn-primary" id="combine-btn" onclick="combineVideoAudio()" style="width:100%">
+              <span id="combine-btn-text">🎬 Combine Video + Audio</span>
+            </button>
           </div>
         </div>
       </div>

@@ -2,6 +2,7 @@ import asyncio
 import subprocess
 import shutil
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
@@ -11,6 +12,7 @@ from pydantic import BaseModel
 from app.config import settings
 from app.services.news import search_news
 from app.services.script import generate_script
+from app.store import video_store
 from app.services.tts import (
     generate_tts_edge, generate_tts_mac, generate_tts_elevenlabs,
     get_audio_duration, list_voices, EDGE_VOICES, MAC_VOICES, ELEVENLABS_VOICES,
@@ -31,7 +33,7 @@ class ScriptRequest(BaseModel):
 
 class TTSRequest(BaseModel):
     text: str
-    voice_key: str = "mac:Samantha (Female)"
+    voice_key: str = "edge:Aria (US Female) ⭐"
 
 
 class CombineRequest(BaseModel):
@@ -58,7 +60,6 @@ async def generate_script_endpoint(req: ScriptRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Script generation failed: {e}")
 
-    # Return script + matching video prompt + sources
     sources = [
         {"title": a["title"], "source": a["source"], "url": a["source_url"], "date": a.get("date", "")}
         for a in articles[:3]
@@ -113,9 +114,9 @@ async def combine_video_audio(req: CombineRequest):
     audio_path = settings.videos_dir / req.audio_filename
 
     if not video_path.exists():
-        raise HTTPException(status_code=404, detail="Video not found")
+        raise HTTPException(status_code=404, detail=f"Video file not found: {req.video_id}.mp4")
     if not audio_path.exists():
-        raise HTTPException(status_code=404, detail="Audio not found")
+        raise HTTPException(status_code=404, detail=f"Audio file not found: {req.audio_filename}")
 
     combined_id = str(uuid.uuid4())
     output_path = settings.videos_dir / f"{combined_id}.mp4"
@@ -129,18 +130,39 @@ async def combine_video_audio(req: CombineRequest):
                 "-c:v", "copy",
                 "-c:a", "aac",
                 "-b:a", "192k",
-                # Trim output to shortest of video/audio so it doesn't pad silence
                 "-shortest",
                 "-movflags", "+faststart",
                 "-y", str(output_path),
             ],
             capture_output=True, text=True,
         )
-        return result.returncode, result.stderr[-400:] if result.returncode != 0 else ""
+        return result.returncode, result.stderr[-600:] if result.returncode != 0 else ""
 
     returncode, err = await asyncio.to_thread(_merge)
     if returncode != 0:
         raise HTTPException(status_code=500, detail=f"ffmpeg combine failed: {err}")
+
+    # Look up original video metadata to copy prompt etc.
+    original = video_store.get(req.video_id) or {}
+
+    # Register the combined video in the store so it shows up in the library
+    video_store.add({
+        "id": combined_id,
+        "prompt": original.get("prompt", "Combined video"),
+        "duration": original.get("duration", 0),
+        "ratio": original.get("ratio", "1280:768"),
+        "status": "completed",
+        "status_label": "Complete",
+        "progress": 1.0,
+        "clips_total": original.get("clips_total", 1),
+        "clips_done": original.get("clips_total", 1),
+        "filename": f"{combined_id}.mp4",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "youtube_url": None,
+        "tiktok_publish_id": None,
+        "runway_task_id": None,
+        "has_audio": True,
+    })
 
     return {"combined_filename": output_path.name, "video_id": combined_id}
 

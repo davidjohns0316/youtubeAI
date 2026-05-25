@@ -137,7 +137,6 @@ let activeTab = 'generate';
 let selectedVideoId = null;
 let pollInterval = null;
 let authStatus = { youtube: false, tiktok: false, runway: false };
-let lastGeneratedVideoId = null;
 let lastAudioFilename = null;
 
 /* ── Init ────────────────────────────────────────────────────────── */
@@ -512,9 +511,8 @@ function startPolling(videoId, clipsTotal) {
         progressBar.style.width = '100%';
         progressStatus.textContent = clipsTotal > 1 ? 'Stitching clips into final video...' : 'Complete! Loading your video...';
 
-        // Store for voiceover combine
-        lastGeneratedVideoId = videoId;
-        updateCombineLabel();
+        // Refresh the video picker so the new video is selectable
+        loadVideosForCombine(videoId);
 
         setTimeout(() => {
           document.getElementById('progress-card').style.display = 'none';
@@ -801,16 +799,34 @@ async function loadVoices() {
   }
 }
 
-function updateCombineLabel() {
-  const label = document.getElementById('combine-video-label');
-  const btn = document.getElementById('combine-btn');
-  if (!label || !btn) return;
-  if (lastGeneratedVideoId) {
-    label.textContent = `Video ready: ${lastGeneratedVideoId.slice(0, 8)}…`;
-    if (lastAudioFilename) btn.disabled = false;
-  } else {
-    label.textContent = 'No video selected — generate one above first';
-    btn.disabled = true;
+async function loadVideosForCombine(autoSelectId = null) {
+  const sel = document.getElementById('combine-video-select');
+  if (!sel) return;
+  try {
+    const res = await fetch('/api/videos');
+    const videos = await res.json();
+    const completed = videos.filter(v => v.status === 'completed' && v.filename);
+    // Sort newest first
+    completed.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+    sel.innerHTML = '<option value="">— select a video —</option>';
+    completed.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v.id;
+      const date = new Date(v.created_at).toLocaleDateString('en-US', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
+      const label = v.prompt ? v.prompt.slice(0, 60) + (v.prompt.length > 60 ? '…' : '') : v.id.slice(0, 8);
+      opt.textContent = `${date} — ${label}`;
+      sel.appendChild(opt);
+    });
+
+    // Auto-select: prefer the passed ID, otherwise the most recent
+    if (autoSelectId && completed.find(v => v.id === autoSelectId)) {
+      sel.value = autoSelectId;
+    } else if (completed.length > 0) {
+      sel.value = completed[0].id;
+    }
+  } catch {
+    // ignore
   }
 }
 
@@ -909,10 +925,12 @@ async function generateVoiceover() {
     const audio = document.getElementById('vo-audio-preview');
     audio.src = `/api/audio/${data.audio_filename}`;
     document.getElementById('audio-section').style.display = 'block';
-    audio.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
-    updateCombineLabel();
-    toast(`Voiceover ready! (${Math.round(data.duration_seconds)}s)`, 'success');
+    // Load completed videos into the picker
+    await loadVideosForCombine();
+
+    audio.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    toast(`Voiceover ready! (${Math.round(data.duration_seconds)}s) — now pick a video and combine`, 'success');
   } catch (err) {
     toast(err.message, 'error');
   } finally {
@@ -922,8 +940,13 @@ async function generateVoiceover() {
 }
 
 async function combineVideoAudio() {
-  if (!lastGeneratedVideoId || !lastAudioFilename) {
-    toast('Need both a video and a voiceover first', 'error');
+  const videoId = document.getElementById('combine-video-select').value;
+  if (!videoId) {
+    toast('Select a video first', 'error');
+    return;
+  }
+  if (!lastAudioFilename) {
+    toast('Generate a voiceover first', 'error');
     return;
   }
 
@@ -936,27 +959,21 @@ async function combineVideoAudio() {
     const res = await fetch('/api/compose/combine', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        video_id: lastGeneratedVideoId,
-        audio_filename: lastAudioFilename,
-      }),
+      body: JSON.stringify({ video_id: videoId, audio_filename: lastAudioFilename }),
     });
     if (!res.ok) {
       const err = await res.json();
       throw new Error(err.detail || 'Combine failed');
     }
-    const data = await res.json();
 
-    // Update state so the combined video becomes the "last" one for another round
-    lastGeneratedVideoId = data.video_id;
     lastAudioFilename = null;
     document.getElementById('audio-section').style.display = 'none';
-    updateCombineLabel();
 
-    toast('Video + audio combined! Check your Library.', 'success');
-    setTimeout(() => switchTab('library'), 1500);
+    toast('Video + audio combined! Opening library…', 'success');
+    setTimeout(() => switchTab('library'), 1200);
   } catch (err) {
     toast(err.message, 'error');
+  } finally {
     btn.disabled = false;
     btnText.textContent = '🎬 Combine Video + Audio';
   }
