@@ -11,8 +11,8 @@ from pydantic import BaseModel
 from app.config import settings
 from app.services.script import generate_script
 from app.services.tts import (
-    generate_tts_mac, generate_tts_elevenlabs,
-    get_audio_duration, list_voices, MAC_VOICES, ELEVENLABS_VOICES,
+    generate_tts_edge, generate_tts_mac, generate_tts_elevenlabs,
+    get_audio_duration, list_voices, EDGE_VOICES, MAC_VOICES, ELEVENLABS_VOICES,
 )
 
 router = APIRouter(prefix="/api", tags=["compose"])
@@ -61,7 +61,14 @@ async def generate_tts_endpoint(req: TTSRequest):
     audio_id = str(uuid.uuid4())
     output_mp3 = settings.videos_dir / f"{audio_id}.mp3"
 
-    if req.voice_key.startswith("mac:"):
+    if req.voice_key.startswith("edge:"):
+        display_name = req.voice_key[5:]
+        voice_id = EDGE_VOICES.get(display_name, "en-US-AriaNeural")
+        try:
+            await generate_tts_edge(req.text, output_mp3, voice_id)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+    elif req.voice_key.startswith("mac:"):
         display_name = req.voice_key[4:]
         voice_name = MAC_VOICES.get(display_name, "Samantha")
         try:
@@ -78,7 +85,7 @@ async def generate_tts_endpoint(req: TTSRequest):
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
     else:
-        raise HTTPException(status_code=400, detail="voice_key must start with 'mac:' or 'el:'")
+        raise HTTPException(status_code=400, detail="voice_key must start with 'edge:', 'mac:', or 'el:'")
 
     duration = await asyncio.to_thread(get_audio_duration, output_mp3)
     return {"audio_filename": output_mp3.name, "duration_seconds": duration}
