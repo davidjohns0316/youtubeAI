@@ -734,8 +734,10 @@ async function openPublishPanel(videoId) {
   if (!video || !video.filename) return;
 
   document.getElementById('publish-preview').src = `/api/videos/${video.filename}`;
-  document.getElementById('pub-title').value = video.prompt.slice(0, 100);
-  document.getElementById('pub-description').value = `AI-generated video\nPrompt: ${video.prompt}`;
+  // Use stored topic/idea title; fall back to prompt; cap at 100 chars (YouTube limit)
+  const titleSource = video.title || video.prompt || 'ViralVault Short';
+  document.getElementById('pub-title').value = titleSource.slice(0, 97);
+  document.getElementById('pub-description').value = '';
 
   // Auth warnings
   document.getElementById('yt-auth-warning').style.display = authStatus.youtube ? 'none' : 'flex';
@@ -1134,6 +1136,7 @@ async function combineVideoAudio() {
 
   try {
     const wantSubs = document.getElementById('subtitles-toggle')?.checked && lastSrtFilename;
+    const topic = document.getElementById('vo-topic')?.value.trim() || '';
     const res = await fetch('/api/compose/combine', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1141,6 +1144,7 @@ async function combineVideoAudio() {
         video_id: videoId,
         audio_filename: lastAudioFilename,
         srt_filename: wantSubs ? lastSrtFilename : null,
+        title: topic || null,
       }),
     });
     if (!res.ok) {

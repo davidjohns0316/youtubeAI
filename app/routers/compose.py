@@ -40,6 +40,7 @@ class CombineRequest(BaseModel):
     video_id: str
     audio_filename: str
     srt_filename: str | None = None   # optional — burn subtitles if provided
+    title: str | None = None          # idea/topic title for publish panel
 
 
 @router.get("/voices")
@@ -184,6 +185,7 @@ async def combine_video_audio(req: CombineRequest):
     original = video_store.get(req.video_id) or {}
     video_store.add({
         "id": combined_id,
+        "title": req.title or original.get("title", ""),
         "prompt": original.get("prompt", "Combined video"),
         "duration": original.get("duration", 0),
         "ratio": original.get("ratio", "1280:768"),
