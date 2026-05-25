@@ -842,6 +842,17 @@ async function generateScript() {
     // Populate script
     document.getElementById('vo-script').value = data.script;
 
+    // Auto-fill the video prompt with the matching visual prompt
+    if (data.video_prompt) {
+      const promptEl = document.getElementById('prompt');
+      promptEl.value = data.video_prompt;
+      document.getElementById('prompt-source-hint').style.display = 'inline';
+      // Brief highlight so user notices it was filled
+      promptEl.style.borderColor = 'var(--accent)';
+      promptEl.style.boxShadow = '0 0 0 3px var(--accent-glow)';
+      setTimeout(() => { promptEl.style.borderColor = ''; promptEl.style.boxShadow = ''; }, 2500);
+    }
+
     // Show sources if we got any
     const sourcesSection = document.getElementById('sources-section');
     const sourcesList = document.getElementById('sources-list');
@@ -861,7 +872,7 @@ async function generateScript() {
     document.getElementById('sources-section').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
     const found = data.articles_found || 0;
-    toast(found > 0 ? `Script generated from ${found} real articles!` : 'Script generated!', 'success');
+    toast(found > 0 ? `Script + video prompt generated from ${found} real articles!` : 'Script generated!', 'success');
   } catch (err) {
     toast(err.message, 'error');
   } finally {

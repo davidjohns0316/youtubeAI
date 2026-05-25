@@ -50,7 +50,7 @@ async def generate_script_endpoint(req: ScriptRequest):
     articles = await search_news(req.topic, max_results=5)
 
     try:
-        script = await asyncio.to_thread(
+        result = await asyncio.to_thread(
             generate_script, req.topic, req.category, req.duration_seconds, articles
         )
     except ValueError as e:
@@ -58,12 +58,17 @@ async def generate_script_endpoint(req: ScriptRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Script generation failed: {e}")
 
-    # Return the script + the sources used so the UI can display them
+    # Return script + matching video prompt + sources
     sources = [
         {"title": a["title"], "source": a["source"], "url": a["source_url"], "date": a.get("date", "")}
         for a in articles[:3]
     ]
-    return {"script": script, "sources": sources, "articles_found": len(articles)}
+    return {
+        "script": result["script"],
+        "video_prompt": result["video_prompt"],
+        "sources": sources,
+        "articles_found": len(articles),
+    }
 
 
 @router.post("/tts/generate")
