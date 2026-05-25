@@ -1,4 +1,7 @@
+import base64
+import hashlib
 import json
+import secrets
 from pathlib import Path
 
 from google.oauth2.credentials import Credentials
@@ -15,6 +18,15 @@ SCOPES = [
 SECRETS_FILE = settings.credentials_dir / "youtube_client_secrets.json"
 TOKEN_FILE = settings.credentials_dir / "youtube_token.json"
 STATE_FILE = settings.credentials_dir / "youtube_oauth_state.txt"
+VERIFIER_FILE = settings.credentials_dir / "youtube_code_verifier.txt"
+
+
+def _make_pkce() -> tuple[str, str]:
+    """Return (code_verifier, code_challenge) for S256 PKCE."""
+    verifier = secrets.token_urlsafe(64)          # 86-char URL-safe string
+    digest = hashlib.sha256(verifier.encode()).digest()
+    challenge = base64.urlsafe_b64encode(digest).rstrip(b"=").decode()
+    return verifier, challenge
 
 
 class YouTubeService:
@@ -28,22 +40,37 @@ class YouTubeService:
                 "credentials/youtube_client_secrets.json not found. "
                 "Download it from Google Cloud Console and place it there."
             )
+
+        verifier, challenge = _make_pkce()
+        VERIFIER_FILE.write_text(verifier)          # persist for callback
+
         flow = Flow.from_client_secrets_file(
             str(SECRETS_FILE),
             scopes=SCOPES,
             redirect_uri=self._redirect_uri,
         )
-        auth_url, state = flow.authorization_url(prompt="consent", access_type="offline")
+        auth_url, state = flow.authorization_url(
+            prompt="consent",
+            access_type="offline",
+            code_challenge=challenge,
+            code_challenge_method="S256",
+        )
         STATE_FILE.write_text(state)
         return auth_url
 
     def handle_callback(self, code: str) -> None:
+        # Load the verifier that was saved during get_auth_url()
+        if not VERIFIER_FILE.exists():
+            raise RuntimeError("OAuth session expired — please try connecting again.")
+        verifier = VERIFIER_FILE.read_text().strip()
+        VERIFIER_FILE.unlink(missing_ok=True)       # single-use
+
         flow = Flow.from_client_secrets_file(
             str(SECRETS_FILE),
             scopes=SCOPES,
             redirect_uri=self._redirect_uri,
         )
-        flow.fetch_token(code=code)
+        flow.fetch_token(code=code, code_verifier=verifier)
         creds = flow.credentials
         token_data = {
             "token": creds.token,
@@ -109,6 +136,7 @@ class YouTubeService:
     def disconnect(self):
         TOKEN_FILE.unlink(missing_ok=True)
         STATE_FILE.unlink(missing_ok=True)
+        VERIFIER_FILE.unlink(missing_ok=True)
 
 
 youtube_service = YouTubeService()
