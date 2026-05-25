@@ -1,0 +1,67 @@
+#!/bin/bash
+# YouTubeAI launcher — starts the local server and opens the browser.
+
+# Resolve the project directory (3 levels up from MacOS/)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+LOG="$HOME/Library/Logs/YouTubeAI.log"
+
+# ── Already running? ──────────────────────────────────────────────────────
+if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
+    CHOICE=$(osascript -e 'button returned of (display dialog "YouTubeAI is already running." buttons {"Open Browser", "Stop Server"} default button "Open Browser" with icon note)')
+    if [ "$CHOICE" = "Stop Server" ]; then
+        PID=$(lsof -ti:8000 2>/dev/null)
+        [ -n "$PID" ] && kill "$PID" && osascript -e 'display notification "Server stopped." with title "YouTubeAI"'
+    else
+        open http://localhost:8000
+    fi
+    exit 0
+fi
+
+# ── Find virtual environment ──────────────────────────────────────────────
+VENV=""
+for v in ".venv" "venv"; do
+    if [ -f "$PROJECT_DIR/$v/bin/activate" ]; then
+        VENV="$PROJECT_DIR/$v/bin/activate"
+        break
+    fi
+done
+
+if [ -z "$VENV" ]; then
+    osascript -e 'display alert "Setup Required" message "Virtual environment not found.\n\nOpen Terminal and run:\n\n    cd '"$PROJECT_DIR"'\n    ./setup.sh" as warning'
+    exit 1
+fi
+
+# ── Check .env has a Runway key ───────────────────────────────────────────
+if [ -f "$PROJECT_DIR/.env" ]; then
+    KEY=$(grep -E '^RUNWAY_API_KEY=.+' "$PROJECT_DIR/.env" | cut -d= -f2 | tr -d '[:space:]')
+fi
+
+if [ -z "$KEY" ]; then
+    osascript -e 'display alert "Runway API Key Missing" message "Add your Runway ML API key to the .env file:\n\n    RUNWAY_API_KEY=your_key_here\n\nGet a key at app.runwayml.com → Settings → API Keys" as warning'
+fi
+
+# ── Start the server ──────────────────────────────────────────────────────
+osascript -e 'display notification "Starting server..." with title "YouTubeAI"'
+
+source "$VENV"
+cd "$PROJECT_DIR"
+nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 >> "$LOG" 2>&1 &
+SERVER_PID=$!
+
+# ── Wait until ready (up to 20 seconds) ──────────────────────────────────
+for i in $(seq 1 40); do
+    if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
+        break
+    fi
+    sleep 0.5
+done
+
+if ! curl -sf http://localhost:8000/health > /dev/null 2>&1; then
+    osascript -e 'display alert "Failed to Start" message "Server did not start. Check logs at:\n\n'"$LOG"'" as warning'
+    kill "$SERVER_PID" 2>/dev/null
+    exit 1
+fi
+
+osascript -e 'display notification "Ready! Opening browser." with title "YouTubeAI"'
+open http://localhost:8000
