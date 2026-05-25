@@ -615,6 +615,40 @@ select {
 }
 .idea-prompt-preview.open { display: block; }
 
+/* ── Script & Voiceover Card ──────────────────────────────────────── */
+.voiceover-card {
+  margin-top: 20px;
+}
+
+.vo-header {
+  margin-bottom: 20px;
+}
+
+.vo-header h3 {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.vo-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 20px 0;
+}
+
+.combine-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.combine-info {
+  font-size: 13px;
+  color: var(--text2);
+}
+
 /* ── Responsive ───────────────────────────────────────────────────── */
 @media (max-width: 700px) {
   .main { padding: 24px 16px 60px; }

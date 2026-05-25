@@ -4,6 +4,8 @@ from pathlib import Path
 
 class Settings(BaseSettings):
     runway_api_key: str = ""
+    anthropic_api_key: str = ""
+    elevenlabs_api_key: str = ""
 
     google_client_id: str = ""
     google_client_secret: str = ""

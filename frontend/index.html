@@ -111,6 +111,77 @@
         <p class="progress-note" id="progress-note">Gen-3 Alpha Turbo takes 1–3 min per clip</p>
         <div class="progress-prompt" id="progress-prompt"></div>
       </div>
+
+      <!-- Script & Voiceover card -->
+      <div class="card voiceover-card" id="voiceover-card">
+        <div class="vo-header">
+          <h3>🎙 Script &amp; Voiceover</h3>
+          <p class="card-sub">AI-generated script + voice narration for your video</p>
+        </div>
+
+        <div class="form-group">
+          <label for="vo-topic">Video Topic</label>
+          <input type="text" id="vo-topic" placeholder="5 Money Rules the Rich Never Tell You">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="vo-category">Category</label>
+            <select id="vo-category">
+              <option value="Finance">Finance</option>
+              <option value="AI News">AI News</option>
+              <option value="Sports Drama">Sports Drama</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="vo-duration">Script Length</label>
+            <select id="vo-duration">
+              <option value="10">~10 seconds</option>
+              <option value="30" selected>~30 seconds</option>
+              <option value="60">~60 seconds</option>
+            </select>
+          </div>
+        </div>
+
+        <button class="btn btn-secondary" id="gen-script-btn" onclick="generateScript()">
+          <span id="gen-script-text">✍ Generate Script</span>
+        </button>
+
+        <!-- Script output + voice -->
+        <div id="script-section" style="display:none;margin-top:20px">
+          <div class="vo-divider"></div>
+          <div class="form-group">
+            <label for="vo-script">Script <span class="hint">(edit if needed)</span></label>
+            <textarea id="vo-script" rows="7" placeholder="Your script will appear here..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="vo-voice">Voice</label>
+            <select id="vo-voice">
+              <option value="">Loading voices...</option>
+            </select>
+          </div>
+
+          <button class="btn btn-secondary" id="gen-voice-btn" onclick="generateVoiceover()">
+            <span id="gen-voice-text">🔊 Generate Voiceover</span>
+          </button>
+
+          <!-- Audio preview + combine -->
+          <div id="audio-section" style="display:none;margin-top:16px">
+            <div class="vo-divider"></div>
+            <label style="display:block;margin-bottom:8px;font-size:13px;color:var(--text2)">Preview</label>
+            <audio id="vo-audio-preview" controls style="width:100%;border-radius:8px;margin-bottom:16px"></audio>
+            <div class="combine-row">
+              <div class="combine-info">
+                <span id="combine-video-label" style="font-size:13px;color:var(--text2)">No video selected — generate one above first</span>
+              </div>
+              <button class="btn btn-primary" id="combine-btn" onclick="combineVideoAudio()" disabled>
+                <span id="combine-btn-text">🎬 Combine Video + Audio</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 

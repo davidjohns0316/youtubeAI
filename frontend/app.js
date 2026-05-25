@@ -137,6 +137,8 @@ let activeTab = 'generate';
 let selectedVideoId = null;
 let pollInterval = null;
 let authStatus = { youtube: false, tiktok: false, runway: false };
+let lastGeneratedVideoId = null;
+let lastAudioFilename = null;
 
 /* ── Init ────────────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
@@ -149,6 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupIdeasTab();
   checkAuthStatus();
   handleOAuthCallback();
+  loadVoices();
 });
 
 /* ── Navigation ──────────────────────────────────────────────────── */
@@ -500,6 +503,10 @@ function startPolling(videoId, clipsTotal) {
         progressBar.style.width = '100%';
         progressStatus.textContent = clipsTotal > 1 ? 'Stitching clips into final video...' : 'Complete! Loading your video...';
 
+        // Store for voiceover combine
+        lastGeneratedVideoId = videoId;
+        updateCombineLabel();
+
         setTimeout(() => {
           document.getElementById('progress-card').style.display = 'none';
           const btn = document.getElementById('generate-btn');
@@ -766,6 +773,158 @@ function setupPlatformTabs() {
     });
   });
 }
+
+/* ── Script & Voiceover ──────────────────────────────────────────── */
+async function loadVoices() {
+  try {
+    const res = await fetch('/api/voices');
+    const voices = await res.json();
+    const sel = document.getElementById('vo-voice');
+    sel.innerHTML = '';
+    Object.entries(voices).forEach(([key, label]) => {
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = label;
+      sel.appendChild(opt);
+    });
+  } catch {
+    // Server not running yet — ignore
+  }
+}
+
+function updateCombineLabel() {
+  const label = document.getElementById('combine-video-label');
+  const btn = document.getElementById('combine-btn');
+  if (!label || !btn) return;
+  if (lastGeneratedVideoId) {
+    label.textContent = `Video ready: ${lastGeneratedVideoId.slice(0, 8)}…`;
+    if (lastAudioFilename) btn.disabled = false;
+  } else {
+    label.textContent = 'No video selected — generate one above first';
+    btn.disabled = true;
+  }
+}
+
+async function generateScript() {
+  const topic = document.getElementById('vo-topic').value.trim();
+  if (!topic) { toast('Enter a topic first', 'error'); return; }
+
+  const btn = document.getElementById('gen-script-btn');
+  const btnText = document.getElementById('gen-script-text');
+  btn.disabled = true;
+  btnText.textContent = 'Generating script...';
+
+  try {
+    const res = await fetch('/api/script/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        topic,
+        category: document.getElementById('vo-category').value,
+        duration_seconds: parseInt(document.getElementById('vo-duration').value),
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Script generation failed');
+    }
+    const data = await res.json();
+    document.getElementById('vo-script').value = data.script;
+    document.getElementById('script-section').style.display = 'block';
+    document.getElementById('vo-script').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    toast('Script generated!', 'success');
+  } catch (err) {
+    toast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btnText.textContent = '✍ Generate Script';
+  }
+}
+
+async function generateVoiceover() {
+  const script = document.getElementById('vo-script').value.trim();
+  if (!script) { toast('Script is empty', 'error'); return; }
+
+  const btn = document.getElementById('gen-voice-btn');
+  const btnText = document.getElementById('gen-voice-text');
+  btn.disabled = true;
+  btnText.textContent = 'Generating voiceover...';
+
+  try {
+    const res = await fetch('/api/tts/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: script,
+        voice_key: document.getElementById('vo-voice').value,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'TTS generation failed');
+    }
+    const data = await res.json();
+    lastAudioFilename = data.audio_filename;
+
+    const audio = document.getElementById('vo-audio-preview');
+    audio.src = `/api/audio/${data.audio_filename}`;
+    document.getElementById('audio-section').style.display = 'block';
+    audio.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    updateCombineLabel();
+    toast(`Voiceover ready! (${Math.round(data.duration_seconds)}s)`, 'success');
+  } catch (err) {
+    toast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btnText.textContent = '🔊 Generate Voiceover';
+  }
+}
+
+async function combineVideoAudio() {
+  if (!lastGeneratedVideoId || !lastAudioFilename) {
+    toast('Need both a video and a voiceover first', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('combine-btn');
+  const btnText = document.getElementById('combine-btn-text');
+  btn.disabled = true;
+  btnText.textContent = 'Combining...';
+
+  try {
+    const res = await fetch('/api/compose/combine', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        video_id: lastGeneratedVideoId,
+        audio_filename: lastAudioFilename,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Combine failed');
+    }
+    const data = await res.json();
+
+    // Update state so the combined video becomes the "last" one for another round
+    lastGeneratedVideoId = data.video_id;
+    lastAudioFilename = null;
+    document.getElementById('audio-section').style.display = 'none';
+    updateCombineLabel();
+
+    toast('Video + audio combined! Check your Library.', 'success');
+    setTimeout(() => switchTab('library'), 1500);
+  } catch (err) {
+    toast(err.message, 'error');
+    btn.disabled = false;
+    btnText.textContent = '🎬 Combine Video + Audio';
+  }
+}
+
+window.generateScript = generateScript;
+window.generateVoiceover = generateVoiceover;
+window.combineVideoAudio = combineVideoAudio;
 
 /* ── Toasts ──────────────────────────────────────────────────────── */
 function toast(message, type = 'info') {
