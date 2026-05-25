@@ -47,13 +47,11 @@ class RunwayService:
             }
             mime = mime_map.get(ext, "image/jpeg")
             payload["promptImage"] = f"data:{mime};base64,{img_b64}"
-            endpoint = "/image_to_video"
-        else:
-            endpoint = "/text_to_video"
 
+        # Runway uses /image_to_video for both text-only and image+text
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(
-                f"{RUNWAY_BASE}{endpoint}",
+                f"{RUNWAY_BASE}/image_to_video",
                 headers=self._headers(),
                 json=payload,
             )
