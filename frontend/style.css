@@ -636,6 +636,49 @@ select {
   margin: 20px 0;
 }
 
+.sources-box {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+}
+
+.sources-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.sources-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sources-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sources-list a {
+  color: var(--text);
+  font-size: 13px;
+  text-decoration: none;
+  line-height: 1.4;
+}
+.sources-list a:hover { color: var(--accent); text-decoration: underline; }
+
+.source-meta {
+  font-size: 11px;
+  color: var(--text3);
+}
+
 .combine-row {
   display: flex;
   align-items: center;

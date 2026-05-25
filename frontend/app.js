@@ -243,10 +243,19 @@ function useIdeaPrompt(ideaIndex) {
   // Switch to Generate tab
   switchTab('generate');
 
-  // Fill in the form
+  // Fill in the video generation form
   document.getElementById('prompt').value = idea.prompt;
   document.getElementById('ratio').value = idea.ratio;
   document.getElementById('duration').value = idea.duration;
+
+  // Pre-fill the Script & Voiceover section with the idea's title + category
+  document.getElementById('vo-topic').value = idea.title;
+  document.getElementById('vo-category').value = idea.category;
+
+  // Match script duration to video duration (capped at 60s options available)
+  const voDur = document.getElementById('vo-duration');
+  const target = idea.duration <= 10 ? '10' : idea.duration <= 30 ? '30' : '60';
+  voDur.value = target;
 
   // Highlight the prompt field
   const promptEl = document.getElementById('prompt');
@@ -259,7 +268,7 @@ function useIdeaPrompt(ideaIndex) {
     promptEl.style.boxShadow = '';
   }, 2000);
 
-  toast(`Loaded: "${idea.title}"`, 'success');
+  toast(`Loaded: "${idea.title}" — scroll down to generate the script`, 'success');
 }
 
 window.useIdeaPrompt = useIdeaPrompt;
@@ -812,7 +821,7 @@ async function generateScript() {
   const btn = document.getElementById('gen-script-btn');
   const btnText = document.getElementById('gen-script-text');
   btn.disabled = true;
-  btnText.textContent = 'Generating script...';
+  btnText.textContent = 'Searching news & writing script...';
 
   try {
     const res = await fetch('/api/script/generate', {
@@ -829,10 +838,30 @@ async function generateScript() {
       throw new Error(err.detail || 'Script generation failed');
     }
     const data = await res.json();
+
+    // Populate script
     document.getElementById('vo-script').value = data.script;
+
+    // Show sources if we got any
+    const sourcesSection = document.getElementById('sources-section');
+    const sourcesList = document.getElementById('sources-list');
+    if (data.sources && data.sources.length > 0) {
+      sourcesList.innerHTML = data.sources.map(s => `
+        <li>
+          <a href="${escHtml(s.url)}" target="_blank" rel="noopener">${escHtml(s.title)}</a>
+          <span class="source-meta">${escHtml(s.source)}${s.date ? ' · ' + new Date(s.date).toLocaleDateString('en-US', {month:'short', day:'numeric'}) : ''}</span>
+        </li>
+      `).join('');
+      sourcesSection.style.display = 'block';
+    } else {
+      sourcesSection.style.display = 'none';
+    }
+
     document.getElementById('script-section').style.display = 'block';
-    document.getElementById('vo-script').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    toast('Script generated!', 'success');
+    document.getElementById('sources-section').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    const found = data.articles_found || 0;
+    toast(found > 0 ? `Script generated from ${found} real articles!` : 'Script generated!', 'success');
   } catch (err) {
     toast(err.message, 'error');
   } finally {

@@ -9,6 +9,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from app.config import settings
+from app.services.news import search_news
 from app.services.script import generate_script
 from app.services.tts import (
     generate_tts_edge, generate_tts_mac, generate_tts_elevenlabs,
@@ -45,15 +46,24 @@ async def get_voices():
 
 @router.post("/script/generate")
 async def generate_script_endpoint(req: ScriptRequest):
+    # Search for real news articles on the topic first
+    articles = await search_news(req.topic, max_results=5)
+
     try:
         script = await asyncio.to_thread(
-            generate_script, req.topic, req.category, req.duration_seconds
+            generate_script, req.topic, req.category, req.duration_seconds, articles
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Script generation failed: {e}")
-    return {"script": script}
+
+    # Return the script + the sources used so the UI can display them
+    sources = [
+        {"title": a["title"], "source": a["source"], "url": a["source_url"], "date": a.get("date", "")}
+        for a in articles[:3]
+    ]
+    return {"script": script, "sources": sources, "articles_found": len(articles)}
 
 
 @router.post("/tts/generate")
