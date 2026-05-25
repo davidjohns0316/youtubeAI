@@ -679,6 +679,38 @@ select {
   color: var(--text3);
 }
 
+/* ── Server Card ──────────────────────────────────────────────────── */
+.server-card {
+  margin-bottom: 24px;
+}
+
+.server-card-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.server-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.server-dot-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.server-hint {
+  font-size: 12px;
+  color: var(--text3);
+}
+
 .subtitles-row {
   display: flex;
   align-items: center;

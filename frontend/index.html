@@ -332,6 +332,22 @@
       <p>Configure API credentials and platform connections</p>
     </div>
 
+    <!-- Server control -->
+    <div class="card server-card">
+      <div class="server-card-inner">
+        <div class="server-info">
+          <div class="server-dot-wrap">
+            <span class="status-dot green" id="server-dot"></span>
+            <span id="server-status-text">Server running</span>
+          </div>
+          <span class="server-hint">Restart after changing .env or adding credentials</span>
+        </div>
+        <button class="btn btn-secondary" id="restart-btn" onclick="restartServer()">
+          <span id="restart-btn-text">↺ Restart Server</span>
+        </button>
+      </div>
+    </div>
+
     <div class="settings-grid">
 
       <!-- Runway ML -->

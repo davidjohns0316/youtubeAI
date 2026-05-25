@@ -1,3 +1,6 @@
+import asyncio
+import os
+import sys
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -26,3 +29,13 @@ async def serve_frontend():
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.post("/api/restart")
+async def restart_server():
+    """Re-exec the uvicorn process in place — re-reads .env and all credentials."""
+    async def _restart():
+        await asyncio.sleep(0.4)   # let the response reach the browser first
+        os.execv(sys.argv[0], sys.argv)
+    asyncio.create_task(_restart())
+    return {"status": "restarting"}

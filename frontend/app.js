@@ -366,6 +366,55 @@ window.disconnectYouTube = disconnectYouTube;
 window.disconnectTikTok = disconnectTikTok;
 window.switchTab = switchTab;
 
+/* ── Server Restart ──────────────────────────────────────────────── */
+async function restartServer() {
+  const btn = document.getElementById('restart-btn');
+  const btnText = document.getElementById('restart-btn-text');
+  const dot = document.getElementById('server-dot');
+  const statusText = document.getElementById('server-status-text');
+
+  btn.disabled = true;
+  btnText.textContent = 'Restarting...';
+  dot.className = 'status-dot red';
+  statusText.textContent = 'Restarting...';
+
+  try {
+    await fetch('/api/restart', { method: 'POST' });
+  } catch {
+    // Expected — server drops the connection as it restarts
+  }
+
+  // Poll /health until the server is back up
+  statusText.textContent = 'Waiting for server...';
+  let attempts = 0;
+  const poll = setInterval(async () => {
+    attempts++;
+    if (attempts > 30) {
+      clearInterval(poll);
+      statusText.textContent = 'Restart timed out — check Terminal';
+      btn.disabled = false;
+      btnText.textContent = '↺ Restart Server';
+      return;
+    }
+    try {
+      const res = await fetch('/health');
+      if (res.ok) {
+        clearInterval(poll);
+        dot.className = 'status-dot green';
+        statusText.textContent = 'Server running';
+        btn.disabled = false;
+        btnText.textContent = '↺ Restart Server';
+        toast('Server restarted successfully!', 'success');
+        checkAuthStatus();  // Re-check connections after restart
+      }
+    } catch {
+      // Still coming back up — keep polling
+    }
+  }, 800);
+}
+
+window.restartServer = restartServer;
+
 /* ── Image Drop ──────────────────────────────────────────────────── */
 function setupImageDrop() {
   const drop = document.getElementById('image-drop');
