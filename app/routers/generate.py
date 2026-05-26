@@ -58,6 +58,49 @@ def _stitch_clips(clip_paths: list[Path], output_path: Path) -> tuple[bool, str]
 RATIO_DIMS = {"1280:768": (1280, 768), "768:1280": (768, 1280), "1024:1024": (1024, 1024)}
 
 
+def _fix_video_dimensions(input_path: Path, target_w: int, target_h: int) -> bool:
+    """
+    If the stitched video has the wrong dimensions (e.g. Runway ignored the ratio param),
+    re-encode it to the correct size in-place. Returns True if a fix was applied.
+    """
+    # Probe actual dimensions
+    probe = subprocess.run(
+        ["ffprobe", "-v", "error", "-select_streams", "v:0",
+         "-show_entries", "stream=width,height",
+         "-of", "csv=s=x:p=0", str(input_path)],
+        capture_output=True, text=True,
+    )
+    try:
+        actual_w, actual_h = map(int, probe.stdout.strip().split("x"))
+    except Exception:
+        return False
+
+    if actual_w == target_w and actual_h == target_h:
+        return False  # already correct
+
+    # Dimensions are wrong — fix in-place via a temp file
+    tmp = input_path.with_suffix(".fix.mp4")
+    result = subprocess.run(
+        [
+            _ffmpeg_bin(),
+            "-i", str(input_path),
+            "-vf",
+            f"scale={target_w}:{target_h}:force_original_aspect_ratio=decrease,"
+            f"pad={target_w}:{target_h}:(ow-iw)/2:(oh-ih)/2:black,setsar=1",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "22",
+            "-c:a", "copy",
+            "-movflags", "+faststart",
+            "-y", str(tmp),
+        ],
+        capture_output=True,
+    )
+    if result.returncode == 0 and tmp.exists():
+        tmp.replace(input_path)   # overwrite original
+        return True
+    tmp.unlink(missing_ok=True)
+    return False
+
+
 async def _fetch_starting_frame(prompt: str, ratio: str, save_dir: Path) -> str | None:
     """
     Generate a real starting frame from Pollinations.ai (free, no API key).
@@ -198,6 +241,12 @@ async def _generate_clips(
         video_store.update(video_id, {"status": "failed", "error": f"ffmpeg stitch failed: {err}"})
         return
 
+    # Guarantee the output has correct dimensions — Runway sometimes ignores ratio param
+    target_w, target_h = RATIO_DIMS.get(ratio, (1280, 768))
+    fixed = await asyncio.to_thread(_fix_video_dimensions, final_path, target_w, target_h)
+    if fixed:
+        video_store.update(video_id, {"status_label": "Fixed video dimensions..."})
+
     video_store.update(video_id, {
         "status": "completed",
         "filename": f"{video_id}.mp4",
@@ -215,7 +264,7 @@ async def generate_video(
     background_tasks: BackgroundTasks,
     prompt: str = Form(...),
     duration: int = Form(5),
-    ratio: str = Form("1280:768"),
+    ratio: str = Form("768:1280"),
     seed: int = Form(None),
     image: UploadFile = File(None),
 ):
